@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+  <h1>Analysis Result</h1>
+  <p>File: {{ file_name }}</p>
+  {% if note %}<p>{{ note }}</p>{% endif %}
+  {% if model_note %}<p>{{ model_note }}</p>{% endif %}
+
+  <h2>Preview (first points)</h2>
+  {% if preview_points %}
+    <ul>
+      {% for p in preview_points %}
+        <li>{{ p.0 }} → {{ p.1 }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No preview.</p>
+  {% endif %}
+
+  {% if plot_url %}
+    <h2>Plot</h2>
+    <img src="{{ plot_url }}" alt="Frequency Response Plot" style="max-width: 100%; height: auto;" />
+  {% endif %}
+
+  <h2>Prediction</h2>
+  {% if prediction != None %}
+    <p>Predicted class: {{ prediction }}</p>
+    {% if probabilities %}
+      <p>Probabilities: {{ probabilities }}</p>
+    {% endif %}
+  {% else %}
+    <p>No prediction available.</p>
+  {% endif %}
+
+  {% if saliency %}
+    <h3>Saliency (first 10)</h3>
+    <p>{{ saliency|slice:":10" }}</p>
+  {% endif %}
+
+  <p><a href="/">Upload another file</a></p>
+</body>
+</html>
+
+

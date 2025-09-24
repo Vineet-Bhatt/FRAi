@@ -3,11 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Transformer FRA Analysis Result</title>
+  <title>Analysis Result</title>
   <style>
+    /* Global Styles */
     body {
       font-family: 'Segoe UI', Tahoma, sans-serif;
       background: #f8f8fc;
+      color: #333;
       margin: 0;
       padding: 0;
       display: flex;
@@ -16,11 +18,12 @@
       min-height: 100vh;
     }
 
+    /* Main container */
     .container {
-      max-width: 900px;
+      max-width: 800px;
       width: 90%;
       background: #fff;
-      margin: 40px auto;
+      margin: 50px auto;
       padding: 40px;
       border-radius: 20px;
       box-shadow: 0 6px 20px rgba(136, 96, 208, 0.2);
@@ -38,8 +41,16 @@
       margin-bottom: 20px;
     }
 
-    h1 { font-size: 2.5rem; margin-bottom: 30px; }
-    p { font-size: 1.05rem; margin: 10px 0; line-height: 1.6; }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+    }
+
+    p {
+      font-size: 1.05rem;
+      margin: 10px 0;
+      line-height: 1.6;
+    }
 
     .highlight {
       background: rgba(136, 96, 208, 0.1);
@@ -60,7 +71,10 @@
       border-radius: 6px;
       transition: background 0.3s;
     }
-    ul li:hover { background: #e3d8ff; }
+
+    ul li:hover {
+      background: #e3d8ff;
+    }
 
     img {
       display: block;
@@ -70,7 +84,10 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       transition: transform 0.3s ease-in-out;
     }
-    img:hover { transform: scale(1.02); }
+
+    img:hover {
+      transform: scale(1.02);
+    }
 
     .btn {
       display: inline-block;
@@ -84,12 +101,16 @@
       font-weight: bold;
       transition: background 0.3s, transform 0.2s;
     }
+
     .btn:hover {
       background: #6f47c8;
       transform: translateY(-2px);
     }
 
-    .center { text-align: center; }
+    .center {
+      text-align: center;
+    }
+
     .note {
       font-style: italic;
       color: #555;
@@ -98,40 +119,18 @@
       border-radius: 8px;
       margin-bottom: 20px;
     }
-
-    .fault-card {
-      background: #f4f0ff;
-      padding: 20px;
-      border-radius: 12px;
-      margin: 20px 0;
-      border-left: 5px solid #8860D0;
-      box-shadow: 0 2px 10px rgba(136, 96, 208, 0.15);
-    }
-    .fault-card h3 { margin-top: 0; }
-    .suggestions ul li {
-      margin: 6px 0;
-      background: #eae2ff;
-      border-radius: 6px;
-      padding: 6px 10px;
-    }
-
-    footer {
-      margin-top: 30px;
-      text-align: center;
-      color: #777;
-      font-size: 0.9rem;
-    }
   </style>
 </head>
 <body>
+
   <div class="container">
-    <h1>🔍 Transformer FRA Analysis Result</h1>
+    <h1>🔍 Analysis Result</h1>
     <p class="highlight"><strong>File:</strong> {{ file_name }}</p>
 
     {% if note %}<p class="note">{{ note }}</p>{% endif %}
     {% if model_note %}<p class="note">{{ model_note }}</p>{% endif %}
 
-    <!-- <h2>📊 Preview (First Points)</h2>
+    <h2>📊 Preview (first points)</h2>
     {% if preview_points %}
       <ul>
         {% for p in preview_points %}
@@ -140,54 +139,37 @@
       </ul>
     {% else %}
       <p>No preview available.</p>
-    {% endif %} -->
-
-    {% if overlay_plot_url %}
-      <h2>📈 Frequency Response Plot</h2>
-      <img src="{{ overlay_plot_url }}" alt="Frequency Response Plot" />
     {% endif %}
 
-    <h2>Fault Analysis</h2>
-      <div class="ml-box">
-        <div class="loader"></div>
-        <p id="ml-status" class="ml-text">Initializing model...</p>
-      </div>
+    {% if plot_url %}
+      <h2>📈 Frequency Response Plot</h2>
+      <img src="{{ plot_url }}" alt="Frequency Response Plot" />
+    {% endif %}
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const status = document.getElementById("ml-status");
-      if (!status) return;
+    {% if overlay_plot_url %}
+      <h2>🟣 Overlay Comparison</h2>
+      <img src="{{ overlay_plot_url }}" alt="Overlay FRA Curves" />
+    {% endif %}
 
-      const steps = [
-        "Loading frequency response data...",
-        "Extracting key spectral features...",
-        "Detecting mechanical anomalies...",
-        "Analyzing winding and insulation patterns...",
-        "Generating diagnostic insights..."
-      ];
+    <h2>🤖 Prediction</h2>
+    {% if prediction != None %}
+      <p><strong>Predicted Class:</strong> {{ prediction }}</p>
+      {% if probabilities %}
+        <p><strong>Probabilities:</strong> {{ probabilities }}</p>
+      {% endif %}
+    {% else %}
+      <p>No prediction available.</p>
+    {% endif %}
 
-      let i = 0;
-      const interval = setInterval(() => {
-        if (i < steps.length) {
-          status.textContent = steps[i];
-          i++;
-        } else {
-          clearInterval(interval);
-          status.classList.remove("ml-text");
-          status.classList.add("ml-final");
-          status.innerHTML = "<strong>Analysis complete:</strong> Possible <strong>core displacement</strong> and <strong>winding deformation</strong> detected. <br><br>Recommended: Inspect clamping pressure and perform insulation resistance testing.";
-        }
-      }, 1500);
-    });
-  </script>
+    {% if saliency %}
+      <h3>🔥 Saliency (first 10)</h3>
+      <p>{{ saliency|slice:":10" }}</p>
+    {% endif %}
 
     <div class="center">
       <a class="btn" href="/">⬆️ Upload Another File</a>
     </div>
-
-    <footer>
-      <p>FRA-Based Transformer Diagnostic System</p>
-    </footer>
   </div>
+
 </body>
 </html>

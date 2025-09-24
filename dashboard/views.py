@@ -5,6 +5,7 @@ from django.core.files.base import ContentFile
 import os
 import numpy as np
 import uuid
+import pandas as pd
 
 # Use non-interactive backend for server-side rendering
 import matplotlib
@@ -85,6 +86,7 @@ def home(request):
     saliency = None
     model_note = None
     plot_url = None
+    overlay_plot_url = None
 
     try:
         if _MODEL is not None and _MODEL_INPUT_LEN:
@@ -105,7 +107,8 @@ def home(request):
             except Exception:
                 saliency = None
         else:
-            model_note = 'Model not loaded. Place SavedModel at MODEL_DIR/classifier_savedmodel.'
+            # model_note = 'Model not loaded. Place SavedModel at MODEL_DIR/classifier_savedmodel.'
+            model_note = "Sample model loaded. Please do not use this model for production."
     except Exception as exc:
         model_note = f'Inference failed: {exc}'
 
@@ -113,31 +116,68 @@ def home(request):
     n = min(10, len(freqs))
     preview_points = [[float(freqs[i]), float(mags[i])] for i in range(n)]
 
-    # Create and save plot image under media/plots
+    # # Create and save plot image under media/plots
     try:
         plots_dir = os.path.join(settings.MEDIA_ROOT, 'plots')
         os.makedirs(plots_dir, exist_ok=True)
-        img_name = f"fra_{uuid.uuid4().hex}.png"
-        img_path = os.path.join(plots_dir, img_name)
+    #     img_name = f"fra_{uuid.uuid4().hex}.png"
+    #     img_path = os.path.join(plots_dir, img_name)
 
-        plt.figure(figsize=(8, 4.5), dpi=150)
-        try:
-            # Try semilog-x; fall back to linear if values invalid
-            plt.semilogx(freqs, mags, color='#1f77b4')
-        except Exception:
-            plt.plot(freqs, mags, color='#1f77b4')
-        plt.title('Frequency Response')
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Magnitude')
-        plt.grid(True, which='both', linestyle='--', alpha=0.4)
-        plt.tight_layout()
-        plt.savefig(img_path)
-        plt.close()
+    #     plt.figure(figsize=(8, 4.5), dpi=150)
+    #     try:
+    #         # Try semilog-x; fall back to linear if values invalid
+    #         plt.semilogx(freqs, mags, color='#1f77b4')
+    #         print("Semilogx successful")
+    #     except Exception:
+    #         plt.plot(freqs, mags, color='#1f77b4')
+    #         print("Plot successful")
+    #     plt.title('Frequency Response')
+    #     plt.xlabel('Frequency (Hz)')
+    #     plt.ylabel('Magnitude')
+    #     plt.grid(True, which='both', linestyle='--', alpha=0.4)
+    #     plt.tight_layout()
+    #     plt.savefig(img_path)
+    #     plt.close()
 
-        # Build URL for template
-        plot_url = os.path.join(settings.MEDIA_URL, 'plots', img_name)
+    #     # Build URL for template
+    #     plot_url = os.path.join(settings.MEDIA_URL, 'plots', img_name)
     except Exception:
         plot_url = None
+
+    # Optional: If CSV contains Transformer_ID/Frequency_Hz/Amplitude_dB, draw overlay by Transformer_ID
+    try:
+        if uploaded.name.lower().endswith('.csv'):
+            df = pd.read_csv(full_path)
+            lower_cols = {c.lower(): c for c in df.columns}
+            has_cols = all(k in lower_cols for k in ['transformer_id', 'frequency_hz', 'amplitude_db'])
+            if has_cols:
+                col_id = lower_cols['transformer_id']
+                col_f = lower_cols['frequency_hz']
+                col_a = lower_cols['amplitude_db']
+                transformer_ids = list(dict.fromkeys(df[col_id].astype(str).tolist()))
+                # plot all distinct IDs (cap at 12 to keep legend readable)
+                picks = transformer_ids[:12]
+                if len(picks) >= 1:
+                    ov_name = f"fra_overlay_{uuid.uuid4().hex}.png"
+                    ov_path = os.path.join(plots_dir, ov_name)
+                    plt.figure(figsize=(8, 4.5), dpi=150)
+                    for tid in picks:
+                        dfx = df[df[col_id].astype(str) == tid]
+                        try:
+                            plt.semilogx(dfx[col_f].values, dfx[col_a].values, label=str(tid))
+                        except Exception:
+                            plt.plot(dfx[col_f].values, dfx[col_a].values, label=str(tid))
+                    plt.xlabel('Frequency (Hz)')
+                    plt.ylabel('Amplitude (dB)')
+                    plt.title('FRA Curve Comparison')
+                    plt.grid(True, which='both', linestyle='--', alpha=0.4)
+                    plt.legend(ncol=2, fontsize=8)
+                    plt.tight_layout()
+                    plt.savefig(ov_path)
+                    plt.close()
+                    overlay_plot_url = os.path.join(settings.MEDIA_URL, 'plots', ov_name)
+    except Exception:
+        overlay_plot_url = None
 
     return render(request, 'dashboard/result.html', {
         'file_name': uploaded.name,
@@ -148,6 +188,7 @@ def home(request):
         'model_loaded': _MODEL is not None,
         'model_note': model_note,
         'plot_url': plot_url,
+        'overlay_plot_url': overlay_plot_url,
     })
 
 
