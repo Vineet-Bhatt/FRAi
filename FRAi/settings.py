@@ -11,21 +11,30 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Environment variables
+env = environ.Env(
+    DEBUG=(bool, False),
+)
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6dci)lzp!+^@&ndt@_!em_f@nig(vl)sraak9-c=jp7czawu9i'
+# Falls back to the existing key if no .env is present (dev only)
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-6dci)lzp!+^@&ndt@_!em_f@nig(vl)sraak9-c=jp7czawu9i')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG', default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [h.strip() for h in env('ALLOWED_HOSTS', default='').split(',') if h.strip()]
 
 
 # Application definition
@@ -37,10 +46,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Third-party
+    'corsheaders',
+    'rest_framework',
+
+    # Local apps
+    'core',
+    'ingestion',
+    'ml',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -73,10 +93,7 @@ WSGI_APPLICATION = 'FRAi.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 }
 
 
@@ -115,6 +132,38 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media (uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = env('MEDIA_ROOT', default=str(BASE_DIR / 'media'))
+
+# ML model directory
+MODEL_DIR = env('MODEL_DIR', default=str(BASE_DIR / 'media' / 'models'))
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+}
+
+# CORS (allow localhost during development)
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOWED_ORIGINS = [
+        # e.g. 'https://your-frontend.example.com'
+    ]
+
+# Whitenoise (optional in prod for static files)
+if not DEBUG:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

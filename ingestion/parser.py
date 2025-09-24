@@ -8,7 +8,7 @@ def parse_csv(path):
     df = pd.read_csv(path)
     if 'frequency' in df.columns.str.lower():
         freq_col = [c for c in df.columns if c.lower().startswith('freq')][0]
-        mag_col = [c for c in df.columns if 'mag' in c.lower() or 'response' in c.lower()][0]
+        mag_col = [c for c in df.columns if 'mag' in c.lower() or 'response' in c.lower() or 'amp' in c.lower()][0]
         freqs = df[freq_col].values
         mags = df[mag_col].values
     else:
